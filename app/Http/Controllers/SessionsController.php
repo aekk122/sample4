@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Auth;
+use Mail;
 
 class SessionsController extends Controller
 {
@@ -26,9 +27,17 @@ class SessionsController extends Controller
     	]);
 
     	if (Auth::attempt($credential, $request->has('remember'))) {
-    		//登录成功
-    		session()->flash('success', '欢迎回来。');
-    		return redirect()->intended(route('users.show', Auth::user()->id));
+    		//验证成功
+            if(Auth::user()->activated) {
+                //检测是否邮箱验证
+                session()->flash('success', '欢迎回来。');
+                return redirect()->intended(route('users.show', Auth::user()->id));
+            } else {
+                Auth::logout();
+                session()->flash('info', '请通过您的邮箱进行验证');
+                return redirect('/');
+            }
+    		
     	} else {
     		//登录失败
     		session()->flash('danger', '用户名或者密码错误。');
@@ -42,4 +51,5 @@ class SessionsController extends Controller
     	return redirect()->route('login');
     }
 
+    
 }
