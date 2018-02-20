@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use App\Notifications\ResetPassword;
+use Auth;
+
 class User extends Authenticatable
 {
     use Notifiable;
@@ -51,7 +53,37 @@ class User extends Authenticatable
     }
 
     public function getAllStatuses() {
-        $statuses = $this->hasManyStatuses()->orderBy('created_at', 'desc');
+        $user_ids = Auth::user()->hasManyFollows->pluck('id')->toArray();
+        array_push($user_ids, Auth::user()->id);
+        $statuses = Status::whereIn('user_id', $user_ids)->with('belongsToUser')->orderBy('created_at', 'desc');
         return $statuses;
+    }
+
+    public function hasManyFollowers() {
+        return $this->belongsToMany(User::class, "followers", 'user_id', 'follower_id');
+    }
+
+    public function hasManyFollows() {
+        return $this->belongsToMany(User::class, 'followers', 'follower_id', 'user_id');
+    }
+
+    public function follow($user_ids) {
+        if (!is_array($user_ids)) {
+            $user_ids = compact('user_ids');
+        }
+
+        $this->hasManyFollows()->sync($user_ids, false);
+    }
+
+    public function unfollow($user_ids) {
+        if (!is_array($user_ids)) {
+            $user_ids = compact("user_ids");
+        }
+
+        $this->hasManyFollows()->detach($user_ids);
+    }
+
+    public function isFollowings($user_id) {
+        return $this->hasManyFollows->contains($user_id);
     }
 }
